@@ -9,38 +9,67 @@ import type { Image } from './types';
 const App: React.FC = () => {
   const [images, setImages] = useState<Image[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isFetchingMore, setIsFetchingMore] = useState<boolean>(false);
   const [selectedImage, setSelectedImage] = useState<Image | null>(null);
   const [isGeneratorModalOpen, setIsGeneratorModalOpen] = useState<boolean>(false);
+
+  const fetchImages = useCallback(async (count: number) => {
+    try {
+      const newImages: Image[] = await Promise.all(
+        Array.from({ length: count }).map(async (_, i) => {
+          const id = `img-${Date.now()}-${Math.random()}`;
+          // Adding a random query string to prevent caching and get different images
+          const response = await fetch(`https://picsum.photos/500/500?random=${id}`);
+          const blob = await response.blob();
+          const src = URL.createObjectURL(blob);
+          return {
+            id: id,
+            src: src,
+            alt: `Random placeholder image ${i + 1}`,
+            prompt: `Random placeholder image`,
+          };
+        })
+      );
+      setImages(prevImages => [...prevImages, ...newImages]);
+    } catch (error) {
+      console.error("Failed to fetch images:", error);
+    }
+  }, []);
+
+  const loadMoreImages = useCallback(async () => {
+    if (isFetchingMore) return;
+    setIsFetchingMore(true);
+    await fetchImages(10);
+    setIsFetchingMore(false);
+  }, [isFetchingMore, fetchImages]);
 
   useEffect(() => {
     const fetchInitialImages = async () => {
       setIsLoading(true);
-      try {
-        const initialImages: Image[] = await Promise.all(
-          Array.from({ length: 15 }).map(async (_, i) => {
-            const id = `initial-${i}-${Date.now()}`;
-            // Adding a random query string to prevent caching and get different images
-            const response = await fetch(`https://picsum.photos/500/500?random=${id}`);
-            const blob = await response.blob();
-            const src = URL.createObjectURL(blob);
-            return {
-              id: id,
-              src: src,
-              alt: `Random placeholder image ${i + 1}`,
-              prompt: `Random placeholder image ${i + 1}`,
-            };
-          })
-        );
-        setImages(initialImages);
-      } catch (error) {
-        console.error("Failed to fetch initial images:", error);
-      } finally {
-        setIsLoading(false);
-      }
+      await fetchImages(15);
+      setIsLoading(false);
     };
 
     fetchInitialImages();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on initial mount
+
+  useEffect(() => {
+    const handleScroll = () => {
+      // Load more when user is 500px from the bottom
+      if (
+        window.innerHeight + document.documentElement.scrollTop < document.documentElement.offsetHeight - 500 ||
+        isLoading ||
+        isFetchingMore
+      ) {
+        return;
+      }
+      loadMoreImages();
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [isLoading, isFetchingMore, loadMoreImages]);
 
 
   const handleImageClick = useCallback((image: Image) => {
@@ -74,6 +103,12 @@ const App: React.FC = () => {
           </div>
         ) : (
           <ImageGrid images={images} onImageClick={handleImageClick} />
+        )}
+
+        {isFetchingMore && (
+           <div className="flex justify-center items-center py-8">
+            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
+          </div>
         )}
       </main>
 
