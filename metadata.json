@@ -1,0 +1,5 @@
+{
+  "name": "AI Image Gallery",
+  "description": "An image gallery app that allows users to view a collection of images and generate new ones using the Imagen 2 AI model with customizable aspect ratios.",
+  "requestFramePermissions": []
+}
