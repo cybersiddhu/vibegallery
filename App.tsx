@@ -18,8 +18,9 @@ const App: React.FC = () => {
       const newImages: Image[] = await Promise.all(
         Array.from({ length: count }).map(async (_, i) => {
           const id = `img-${Date.now()}-${Math.random()}`;
-          // Adding a random query string to prevent caching and get different images
-          const response = await fetch(`https://picsum.photos/500/500?random=${id}`);
+          // Using loremflickr as a more reliable placeholder image source.
+          // Adding a random query string to prevent caching and get different images.
+          const response = await fetch(`https://loremflickr.com/500/500/abstract?random=${id}`);
           const blob = await response.blob();
           const src = URL.createObjectURL(blob);
           return {
